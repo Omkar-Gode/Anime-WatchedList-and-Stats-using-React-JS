@@ -10,45 +10,46 @@ import Main from "./components/Main";
 import WatchedStats from "./components/WatchedStats";
 
 function App(){
-    const [animes,setAnimes] = useState([]);
+    const [animes, setAnimes] = useState([]);
     const [query, setQuery] = useState('');
     const [selectedAnime, setSelectedAnime] = useState(null);
     const [isLoading, setIsLoading] = useState(false);
     const [starRating, setStarRating] = useState(0);
     const [watchedList, setWatchedList] = useState([]);
 
+    useEffect(function () {
+        const controller = new AbortController();
+        async function getAnimeList(url, q){
+            try{
+                setIsLoading(true);
+                const res =  await fetch(url+q, {signal: controller.signal});
+                // if (!res.ok){
+                //     throw new Error("Problem in Response",res.status,res.statusText);
+                // }
+                const data = await res.json();
+                console.log(data.data);
+                setAnimes(animes => data.data);
+            }
+            catch (err){
+                console.log("Something Happened \n",err);
+            }
+            finally{
+                setIsLoading(false);
+            }
+        }
 
-    // useEffect(function () {
-    //     const controller = new AbortController();
-    //     async function getAnimeList(url){
-    //         try{
-    //             setIsLoading(true);
+        if (query.length < 3){
+            setAnimes(animes => []);
+            return;
+        }
 
-    //             const res =  await fetch(url+query, {signal: controller.signal});
-    //             const data = await res.json();
-
-    //             setAnimes(data.data);
-    //         }
-    //         catch (err){
-    //             console.log("Something Happened \n",err);
-    //         }
-    //         finally{
-    //             setIsLoading(false);
-    //         }
-    //     }
-
-    //     if (query.length <3){
-    //         setAnimes([]);
-    //         return;
-    //     }
-
-    //     getAnimeList('https://api.jikan.moe/v4/anime?q=');
-
-    //     return function (){
-    //         controller.abort();
-    //     }
-    // },
-    // [query]);
+        getAnimeList('https://api.jikan.moe/v4/anime?q=', query);
+        
+        return function (){
+            controller.abort();
+        }
+    },
+    [query]);
 
 
     function handleSetMovies(){
@@ -67,7 +68,7 @@ function App(){
 
                 const data = await res.json();
 
-                setAnimes(data.data);
+                setAnimes(animes => data.data);
             }
             catch(err){
                 console.log("something Happened\n",err);
@@ -122,31 +123,42 @@ function App(){
         return contains;
     }
 
+
     return(
         <div className="container">
             <NavBar>
                 <div className="query">
-                    <input type="text" placeholder="type anime name ..."value={query}  onChange={(e)=>{setQuery(e.target.value)}}></input>
+                    <input id="query" type="text" placeholder="type anime name ..." value={query}  onChange={(e)=>{setQuery(query => e.target.value)}}></input>
                     <button onClick={() => {handleSetMovies();}}>Search</button>
                 </div>
                 <Result>
                     {query==='' ? 
                     <p>Search something..</p> :
-                    <p><strong>{animes.length}</strong> {query} results</p>
+                    animes ? <p><strong>{animes.length}</strong> {query} results</p> : <p>Nothing yet</p>
                     }
                 </Result>
             </NavBar>
             <Main>
                 <Box title="Searched Results">
-                    <div className="loading" >{isLoading && <div><div className="loader"></div><br/><>Loading ... Please wait</></div>}</div>
-                    <div className="loading" >{!isLoading && animes.length===0 && <>No Results Found... 😞<br/>&#128269; Try Searching something</>}</div>
-                    <AnimeList>
-                        {!isLoading && animes.length>0 &&
-                            animes.map(anime => 
-                                (<Anime anime={anime} handleSetSelectedAnime={handleSetSelectedAnime} key={anime.mal_id}/>))
-                        }
-                    </AnimeList>
+                    {isLoading && <div className="loading" ><div><div className="loader"></div><br/><>Loading ... Please wait</></div></div>}
+                    
+                    {!isLoading ? 
+                      animes && animes.length===0 && <div className="loading" > <>No Results Found... 😞<br/>&#128269; Try Searching something</></div>
+                      :
+                      <></>
+                    }
+
+                    { 
+                    !isLoading && animes && 
+                        <AnimeList>
+                            { 
+                                animes.map(anime => 
+                                    (<Anime anime={anime} handleSetSelectedAnime={handleSetSelectedAnime} key={anime.mal_id}/>))
+                            }
+                        </AnimeList>
+                    }
                 </Box>
+
                 {selectedAnime ? (
                     containsAnime(watchedList,selectedAnime) ?
                     <AnimeDetails anime={selectedAnime} watched={selectedAnime.watched} handleSetSelectedAnime={handleSetSelectedAnime} starRating={starRating} key={selectedAnime.mal_id}>
@@ -181,6 +193,7 @@ function App(){
             </Main>
         </div>
     );
+
 }
 
 

@@ -411,12 +411,14 @@
 
 
   .loading{
+    padding-top: 20%;
     width: 100%;
     color: white;
     display: flex;
     justify-content: center;
     align-items: center;
     font-size: 160%;
+    font-family: cursive;
   }
 
   .loading div{
